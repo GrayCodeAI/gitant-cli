@@ -106,6 +106,146 @@ var gitRemoteSetUrlCmd = &cobra.Command{
 	},
 }
 
+var gitRemoteRenameCmd = &cobra.Command{
+	Use:   "rename <old> <new>",
+	Short: "Rename a remote",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		rename := exec.Command("git", "remote", "rename", args[0], args[1])
+		rename.Stdout = os.Stdout
+		rename.Stderr = os.Stderr
+		if err := rename.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Renamed remote %s to %s\n", args[0], args[1])
+	},
+}
+
+var gitRemoteShowCmd = &cobra.Command{
+	Use:   "show <name>",
+	Short: "Show information about a remote",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "remote", "show", args[0]).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitRemotePruneCmd = &cobra.Command{
+	Use:   "prune <name>",
+	Short: "Delete stale tracking references",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "remote", "prune", args[0]).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitRemoteUpdateCmd = &cobra.Command{
+	Use:   "update [remote]",
+	Short: "Fetch updates for remotes",
+	Run: func(cmd *cobra.Command, args []string) {
+		remoteArgs := append([]string{"remote", "update"}, args...)
+		out, err := exec.Command("git", remoteArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitRemoteGetUrlCmd = &cobra.Command{
+	Use:   "get-url <name>",
+	Short: "Get URL for a remote",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		push, _ := cmd.Flags().GetBool("push")
+		remoteArgs := []string{"remote", "get-url"}
+		if push {
+			remoteArgs = append(remoteArgs, "--push")
+		}
+		remoteArgs = append(remoteArgs, args[0])
+		out, err := exec.Command("git", remoteArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitRemoteSetBranchesCmd = &cobra.Command{
+	Use:   "set-branches <name> <branch>...",
+	Short: "Change the list of branches tracked",
+	Args:  cobra.MinimumNArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		add, _ := cmd.Flags().GetBool("add")
+		remoteArgs := []string{"remote", "set-branches"}
+		if add {
+			remoteArgs = append(remoteArgs, "--add")
+		}
+		remoteArgs = append(remoteArgs, args...)
+		out, err := exec.Command("git", remoteArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitRemoteSetHeadCmd = &cobra.Command{
+	Use:   "set-head <name> <branch>",
+	Short: "Set or delete the default branch",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "remote", "set-head", args[0], args[1]).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitRemoteGetHeadCmd = &cobra.Command{
+	Use:   "get-head <name>",
+	Short: "Query which HEAD the remote has",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "remote", "get-head", args[0]).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitRemoteSetPushCmd = &cobra.Command{
+	Use:   "set-push <name> <url>",
+	Short: "Change push URLs",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "remote", "set-push", args[0], args[1]).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
 // git branch
 var gitBranchCmd = &cobra.Command{
 	Use:   "branch",
@@ -618,6 +758,76 @@ var gitStashDropCmd = &cobra.Command{
 	},
 }
 
+var gitStashShowCmd = &cobra.Command{
+	Use:   "show [stash]",
+	Short: "Show the changes recorded in the stash",
+	Run: func(cmd *cobra.Command, args []string) {
+		stashArgs := append([]string{"stash", "show"}, args...)
+		out, err := exec.Command("git", stashArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitStashApplyCmd = &cobra.Command{
+	Use:   "apply [stash]",
+	Short: "Apply stash without removing it",
+	Run: func(cmd *cobra.Command, args []string) {
+		stashArgs := append([]string{"stash", "apply"}, args...)
+		out, err := exec.Command("git", stashArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitStashBranchCmd = &cobra.Command{
+	Use:   "branch <branchname> [stash]",
+	Short: "Create a new branch from a stash",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		stashArgs := append([]string{"stash", "branch"}, args...)
+		out, err := exec.Command("git", stashArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitStashClearCmd = &cobra.Command{
+	Use:   "clear",
+	Short: "Remove all stashes",
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "stash", "clear").Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitStashStoreCmd = &cobra.Command{
+	Use:   "store <commit>",
+	Short: "Store a stash without touching the working tree",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "stash", "store", args[0]).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
 // git worktree
 var gitWorktreeCmd = &cobra.Command{
 	Use:   "worktree",
@@ -643,6 +853,102 @@ var gitWorktreeAddCmd = &cobra.Command{
 	Args:  cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
 		worktreeArgs := append([]string{"worktree", "add"}, args...)
+		out, err := exec.Command("git", worktreeArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitWorktreeRemoveCmd = &cobra.Command{
+	Use:   "remove <path>",
+	Short: "Remove a worktree",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		force, _ := cmd.Flags().GetBool("force")
+		worktreeArgs := []string{"worktree", "remove"}
+		if force {
+			worktreeArgs = append(worktreeArgs, "--force")
+		}
+		worktreeArgs = append(worktreeArgs, args[0])
+		out, err := exec.Command("git", worktreeArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitWorktreeMoveCmd = &cobra.Command{
+	Use:   "move <path> <new-path>",
+	Short: "Move a worktree",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		worktreeArgs := []string{"worktree", "move", args[0], args[1]}
+		out, err := exec.Command("git", worktreeArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitWorktreeLockCmd = &cobra.Command{
+	Use:   "lock <path>",
+	Short: "Lock a worktree",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		reason, _ := cmd.Flags().GetString("reason")
+		worktreeArgs := []string{"worktree", "lock"}
+		if reason != "" {
+			worktreeArgs = append(worktreeArgs, "--reason", reason)
+		}
+		worktreeArgs = append(worktreeArgs, args[0])
+		out, err := exec.Command("git", worktreeArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitWorktreeUnlockCmd = &cobra.Command{
+	Use:   "unlock <path>",
+	Short: "Unlock a worktree",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "worktree", "unlock", args[0]).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitWorktreePruneCmd = &cobra.Command{
+	Use:   "prune",
+	Short: "Prune stale working tree information",
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "worktree", "prune").Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitWorktreeRepairCmd = &cobra.Command{
+	Use:   "repair [path]",
+	Short: "Repair working tree administrative files",
+	Run: func(cmd *cobra.Command, args []string) {
+		worktreeArgs := append([]string{"worktree", "repair"}, args...)
 		out, err := exec.Command("git", worktreeArgs...).Output()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -869,10 +1175,12 @@ func init() {
 	gitArchiveCmd.Flags().StringP("output", "o", "", "Output file")
 
 	// Stash
-	gitStashCmd.AddCommand(gitStashSaveCmd, gitStashListCmd, gitStashPopCmd, gitStashDropCmd)
+	gitStashCmd.AddCommand(gitStashSaveCmd, gitStashListCmd, gitStashPopCmd, gitStashDropCmd, gitStashShowCmd, gitStashApplyCmd, gitStashBranchCmd, gitStashClearCmd, gitStashStoreCmd)
 
 	// Remote
-	gitRemoteCmd.AddCommand(gitRemoteListCmd, gitRemoteAddCmd, gitRemoteRemoveCmd, gitRemoteSetUrlCmd)
+	gitRemoteCmd.AddCommand(gitRemoteListCmd, gitRemoteAddCmd, gitRemoteRemoveCmd, gitRemoteSetUrlCmd, gitRemoteRenameCmd, gitRemoteShowCmd, gitRemotePruneCmd, gitRemoteUpdateCmd, gitRemoteGetUrlCmd, gitRemoteSetBranchesCmd, gitRemoteSetHeadCmd, gitRemoteGetHeadCmd, gitRemoteSetPushCmd)
+	gitRemoteGetUrlCmd.Flags().Bool("push", false, "Query push URL")
+	gitRemoteSetBranchesCmd.Flags().Bool("add", false, "Add to existing branches")
 
 	// Branch
 	gitBranchCmd.AddCommand(gitBranchListCmd, gitBranchCreateCmd, gitBranchDeleteCmd)
@@ -881,7 +1189,9 @@ func init() {
 	gitTagCmd.AddCommand(gitTagListCmd, gitTagCreateCmd, gitTagDeleteCmd)
 
 	// Worktree
-	gitWorktreeCmd.AddCommand(gitWorktreeListCmd, gitWorktreeAddCmd)
+	gitWorktreeCmd.AddCommand(gitWorktreeListCmd, gitWorktreeAddCmd, gitWorktreeRemoveCmd, gitWorktreeMoveCmd, gitWorktreeLockCmd, gitWorktreeUnlockCmd, gitWorktreePruneCmd, gitWorktreeRepairCmd)
+	gitWorktreeRemoveCmd.Flags().BoolP("force", "f", false, "Force removal")
+	gitWorktreeLockCmd.Flags().String("reason", "", "Reason for locking")
 
 	// Submodule
 	gitSubmoduleCmd.AddCommand(gitSubmoduleListCmd, gitSubmoduleInitCmd, gitSubmoduleUpdateCmd)

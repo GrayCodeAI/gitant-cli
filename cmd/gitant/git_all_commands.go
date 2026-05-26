@@ -254,6 +254,90 @@ var gitBisectResetCmd = &cobra.Command{
 	},
 }
 
+var gitBisectSkipCmd = &cobra.Command{
+	Use:   "skip [commit]",
+	Short: "Skip a commit in bisecting",
+	Run: func(cmd *cobra.Command, args []string) {
+		bisectArgs := append([]string{"bisect", "skip"}, args...)
+		bisect := exec.Command("git", bisectArgs...)
+		bisect.Stdout = os.Stdout
+		bisect.Stderr = os.Stderr
+		if err := bisect.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
+var gitBisectLogCmd = &cobra.Command{
+	Use:   "log",
+	Short: "Show bisect log",
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "bisect", "log").Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitBisectReplayCmd = &cobra.Command{
+	Use:   "replay <logfile>",
+	Short: "Replay bisect log",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "bisect", "replay", args[0]).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitBisectVisualizeCmd = &cobra.Command{
+	Use:   "visualize",
+	Short: "Show bisect states in gitk",
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "bisect", "visualize").Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitBisectTermsCmd = &cobra.Command{
+	Use:   "terms",
+	Short: "Show terms used by bisect",
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "bisect", "terms").Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitBisectRunCmd = &cobra.Command{
+	Use:   "run <cmd>...",
+	Short: "Run a script to bisect automatically",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		bisectArgs := append([]string{"bisect", "run"}, args...)
+		bisect := exec.Command("git", bisectArgs...)
+		bisect.Stdout = os.Stdout
+		bisect.Stderr = os.Stderr
+		if err := bisect.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
 // git notes
 var gitNotesCmd = &cobra.Command{
 	Use:   "notes",
@@ -287,6 +371,123 @@ var gitNotesShowCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
+	},
+}
+
+var gitNotesEditCmd = &cobra.Command{
+	Use:   "edit [object]",
+	Short: "Edit notes for an object",
+	Run: func(cmd *cobra.Command, args []string) {
+		notesArgs := append([]string{"notes", "edit"}, args...)
+		notes := exec.Command("git", notesArgs...)
+		notes.Stdout = os.Stdout
+		notes.Stderr = os.Stderr
+		if err := notes.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
+var gitNotesCopyCmd = &cobra.Command{
+	Use:   "copy <from-object> <to-object>",
+	Short: "Copy notes between objects",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "notes", "copy", args[0], args[1]).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitNotesAppendCmd = &cobra.Command{
+	Use:   "append [object]",
+	Short: "Append to notes on an object",
+	Run: func(cmd *cobra.Command, args []string) {
+		notesArgs := append([]string{"notes", "append"}, args...)
+		notes := exec.Command("git", notesArgs...)
+		notes.Stdout = os.Stdout
+		notes.Stderr = os.Stderr
+		if err := notes.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
+var gitNotesRemoveCmd = &cobra.Command{
+	Use:   "remove [object]",
+	Short: "Remove notes",
+	Run: func(cmd *cobra.Command, args []string) {
+		notesArgs := append([]string{"notes", "remove"}, args...)
+		notes := exec.Command("git", notesArgs...)
+		notes.Stdout = os.Stdout
+		notes.Stderr = os.Stderr
+		if err := notes.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
+var gitNotesListCmd = &cobra.Command{
+	Use:   "list [object]",
+	Short: "List notes",
+	Run: func(cmd *cobra.Command, args []string) {
+		notesArgs := append([]string{"notes", "list"}, args...)
+		out, err := exec.Command("git", notesArgs...).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		if len(out) == 0 {
+			fmt.Println("No notes found")
+		} else {
+			fmt.Print(string(out))
+		}
+	},
+}
+
+var gitNotesMergeCmd = &cobra.Command{
+	Use:   "merge <notes-ref>",
+	Short: "Merge notes",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "notes", "merge", args[0]).Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitNotesPruneCmd = &cobra.Command{
+	Use:   "prune",
+	Short: "Remove all notes for unreachable objects",
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "notes", "prune").Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
+	},
+}
+
+var gitNotesGetRefCmd = &cobra.Command{
+	Use:   "get-ref",
+	Short: "Show the current notes ref",
+	Run: func(cmd *cobra.Command, args []string) {
+		out, err := exec.Command("git", "notes", "get-ref").Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(out))
 	},
 }
 
@@ -875,10 +1076,10 @@ func init() {
 	gitMvCmd.Flags().BoolP("force", "f", false, "Force move")
 
 	// Bisect subcommands
-	gitBisectCmd.AddCommand(gitBisectStartCmd, gitBisectGoodCmd, gitBisectBadCmd, gitBisectResetCmd)
+	gitBisectCmd.AddCommand(gitBisectStartCmd, gitBisectGoodCmd, gitBisectBadCmd, gitBisectResetCmd, gitBisectSkipCmd, gitBisectLogCmd, gitBisectReplayCmd, gitBisectVisualizeCmd, gitBisectTermsCmd, gitBisectRunCmd)
 
 	// Notes subcommands
-	gitNotesCmd.AddCommand(gitNotesAddCmd, gitNotesShowCmd)
+	gitNotesCmd.AddCommand(gitNotesAddCmd, gitNotesShowCmd, gitNotesEditCmd, gitNotesCopyCmd, gitNotesAppendCmd, gitNotesRemoveCmd, gitNotesListCmd, gitNotesMergeCmd, gitNotesPruneCmd, gitNotesGetRefCmd)
 
 	// Add all new commands to gitCmd
 	gitCmd.AddCommand(
