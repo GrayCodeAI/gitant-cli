@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/GrayCodeAI/gitant-cli/internal/cli"
 	"github.com/spf13/cobra"
@@ -181,8 +182,110 @@ var prCommentsCmd = &cobra.Command{
 	},
 }
 
+var prCheckoutCmd = &cobra.Command{
+	Use:   "checkout [pr-id]",
+	Short: "Check out a pull request locally",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		repo, _ := cmd.Flags().GetString("repo")
+		daemonURL, _ := cmd.Flags().GetString("daemon-url")
+
+		client := cli.NewClient(daemonURL)
+		var result map[string]interface{}
+		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/prs/%s", repo, args[0]), &result); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		sourceBranch, _ := result["source_branch"].(string)
+		if sourceBranch == "" {
+			sourceBranch = fmt.Sprintf("pr-%s", args[0])
+		}
+
+		// Create and checkout branch
+		checkout := exec.Command("git", "checkout", "-b", sourceBranch)
+		checkout.Stdout = os.Stdout
+		checkout.Stderr = os.Stderr
+		if err := checkout.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error checking out branch: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Checked out PR %s as branch %s\n", args[0], sourceBranch)
+	},
+}
+
+var prDiffCmd = &cobra.Command{
+	Use:   "diff [pr-id]",
+	Short: "View the diff of a pull request",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		repo, _ := cmd.Flags().GetString("repo")
+		daemonURL, _ := cmd.Flags().GetString("daemon-url")
+
+		client := cli.NewClient(daemonURL)
+		var result map[string]interface{}
+		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/prs/%s", repo, args[0]), &result); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		sourceBranch, _ := result["source_branch"].(string)
+		targetBranch, _ := result["target_branch"].(string)
+
+		if targetBranch == "" {
+			targetBranch = "main"
+		}
+
+		// Run git diff
+		diff := exec.Command("git", "diff", fmt.Sprintf("%s...%s", targetBranch, sourceBranch))
+		diff.Stdout = os.Stdout
+		diff.Stderr = os.Stderr
+		if err := diff.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting diff: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
+var prCloseCmd = &cobra.Command{
+	Use:   "close [pr-id]",
+	Short: "Close a pull request",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		repo, _ := cmd.Flags().GetString("repo")
+		daemonURL, _ := cmd.Flags().GetString("daemon-url")
+
+		client := cli.NewClient(daemonURL)
+		var result map[string]interface{}
+		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/prs/%s/close", repo, args[0]), nil, &result); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Closed PR %s\n", args[0])
+	},
+}
+
+var prReadyCmd = &cobra.Command{
+	Use:   "ready [pr-id]",
+	Short: "Mark a pull request as ready for review",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		repo, _ := cmd.Flags().GetString("repo")
+		daemonURL, _ := cmd.Flags().GetString("daemon-url")
+
+		client := cli.NewClient(daemonURL)
+		var result map[string]interface{}
+		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/prs/%s/ready", repo, args[0]), nil, &result); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("PR %s marked as ready for review\n", args[0])
+	},
+}
+
 func init() {
-	for _, c := range []*cobra.Command{prListCmd, prViewCmd, prCreateCmd, prMergeCmd, prReviewCmd, prCommentsCmd} {
+	for _, c := range []*cobra.Command{prListCmd, prViewCmd, prCreateCmd, prMergeCmd, prReviewCmd, prCommentsCmd, prCheckoutCmd, prDiffCmd, prCloseCmd, prReadyCmd} {
 		c.Flags().StringP("repo", "r", "", "Repository name (required)")
 		c.MarkFlagRequired("repo")
 		c.Flags().String("daemon-url", "", "Daemon URL (default: http://localhost:7777)")
@@ -196,6 +299,6 @@ func init() {
 	prReviewCmd.Flags().StringP("verdict", "v", "", "Review verdict: approve|request_changes|comment (required)")
 	prReviewCmd.Flags().StringP("body", "b", "", "Review comment")
 
-	prCmd.AddCommand(prListCmd, prViewCmd, prCreateCmd, prMergeCmd, prReviewCmd, prCommentsCmd)
+	prCmd.AddCommand(prListCmd, prViewCmd, prCreateCmd, prMergeCmd, prReviewCmd, prCommentsCmd, prCheckoutCmd, prDiffCmd, prCloseCmd, prReadyCmd)
 	rootCmd.AddCommand(prCmd)
 }
