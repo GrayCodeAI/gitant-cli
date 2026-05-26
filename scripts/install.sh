@@ -16,20 +16,26 @@ case "$ARCH" in
     ;;
 esac
 
-if [ "$OS" = "darwin" ]; then
-  OS="Darwin"
-elif [ "$OS" = "linux" ]; then
-  OS="Linux"
-else
-  echo "Unsupported OS: $OS" >&2
-  exit 1
-fi
+case "$OS" in
+  darwin|linux) ;;
+  *)
+    echo "Unsupported OS: $OS" >&2
+    exit 1
+    ;;
+esac
 
 if [ "$GITANT_VERSION" = "latest" ]; then
   GITANT_VERSION="$(curl -fsSL "https://api.github.com/repos/${GITANT_REPO}/releases/latest" | grep '"tag_name"' | head -1 | cut -d'"' -f4)"
 fi
 
-ARCHIVE="gitant-cli_${GITANT_VERSION}_${OS}_${ARCH}.tar.gz"
+# Goreleaser archives: gitant-cli_0.1.0_darwin_arm64.tar.gz (no "v", lowercase OS)
+VERSION="${GITANT_VERSION#v}"
+EXT="tar.gz"
+if [ "$OS" = "windows" ]; then
+  EXT="zip"
+fi
+
+ARCHIVE="gitant-cli_${VERSION}_${OS}_${ARCH}.${EXT}"
 URL="https://github.com/${GITANT_REPO}/releases/download/${GITANT_VERSION}/${ARCHIVE}"
 
 TMP="$(mktemp -d)"
@@ -37,10 +43,16 @@ trap 'rm -rf "$TMP"' EXIT
 
 echo "Downloading ${URL}..."
 curl -fsSL "$URL" -o "${TMP}/${ARCHIVE}"
-tar xzf "${TMP}/${ARCHIVE}" -C "$TMP"
 
+if [ "$EXT" = "zip" ]; then
+  unzip -q "${TMP}/${ARCHIVE}" -d "$TMP"
+else
+  tar xzf "${TMP}/${ARCHIVE}" -C "$TMP"
+fi
+
+mkdir -p "${INSTALL_DIR}"
 install -m 755 "${TMP}/gitant" "${INSTALL_DIR}/gitant"
 install -m 755 "${TMP}/git-remote-gitant" "${INSTALL_DIR}/git-remote-gitant"
 
 echo "Installed gitant and git-remote-gitant to ${INSTALL_DIR}"
-gitant version
+"${INSTALL_DIR}/gitant" version
