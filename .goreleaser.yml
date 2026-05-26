@@ -7,6 +7,24 @@ before:
     - go mod tidy
 
 builds:
+  - id: gt
+    main: ./cmd/gitant/
+    binary: gt
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/GrayCodeAI/gitant-cli/internal/version.Version={{.Version}}
+      - -X github.com/GrayCodeAI/gitant-cli/internal/version.Commit={{.Commit}}
+      - -X github.com/GrayCodeAI/gitant-cli/internal/version.BuildTime={{.Date}}
+
   - id: gitant
     main: ./cmd/gitant/
     binary: gitant

@@ -14,9 +14,10 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "gitant",
+	Use:   "gt",
 	Short: "Gitant CLI for developers and agents",
 	Long:  "Client for Gitant nodes — push, pull, issues, PRs, and more. Pair with gitant-daemon (self-host) or a hosted Gitant URL.",
+	Aliases: []string{"gitant"},
 }
 
 var initCmd = &cobra.Command{

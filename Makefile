@@ -9,9 +9,10 @@ LDFLAGS := -ldflags "-s -w \
 	-X github.com/GrayCodeAI/gitant-cli/internal/version.Commit=$(COMMIT) \
 	-X github.com/GrayCodeAI/gitant-cli/internal/version.BuildTime=$(BUILD_TIME)"
 
-## build: Compile gitant and git-remote-gitant
+## build: Compile gt (gitant) and git-remote-gitant
 build:
-	CGO_ENABLED=0 go build $(LDFLAGS) -o bin/gitant ./cmd/gitant/
+	CGO_ENABLED=0 go build $(LDFLAGS) -o bin/gt ./cmd/gitant/
+	cp bin/gt bin/gitant
 	CGO_ENABLED=0 go build $(LDFLAGS) -o bin/git-remote-gitant ./cmd/git-remote-gitant/
 
 ## install: Install to $GOPATH/bin
