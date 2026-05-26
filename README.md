@@ -4,6 +4,8 @@ Client for [Gitant](https://github.com/GrayCodeAI/gitant-daemon) — use from th
 
 Install **`gitant-cli`** on your laptop. Install **`gitant-daemon`** (or use Gitant Cloud) as the server.
 
+**Full setup guide:** [gitant-daemon docs/QUICKSTART.md](https://github.com/GrayCodeAI/gitant-daemon/blob/main/docs/QUICKSTART.md)
+
 ## Install
 
 ### Pre-built binary (releases)
