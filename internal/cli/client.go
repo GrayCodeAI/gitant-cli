@@ -7,132 +7,161 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
+
+	"github.com/GrayCodeAI/gitant-cli/internal/config"
 )
 
-// Client is an HTTP client for the gitant daemon API
+// Client is an HTTP client for the gitant daemon API.
 type Client struct {
 	BaseURL string
+	Token   string
 }
 
-// NewClient creates a new daemon client
-// Priority: --daemon-url flag > GITANT_DAEMON_URL env > default localhost:7777
+// NewClient creates a client. Resolves URL and UCAN token from flag, env, then config.
 func NewClient(url string) *Client {
 	if url == "" {
 		url = os.Getenv("GITANT_DAEMON_URL")
 	}
 	if url == "" {
+		if s, err := config.Load(); err == nil && s.DaemonURL != "" {
+			url = s.DaemonURL
+		}
+	}
+	if url == "" {
 		url = "http://localhost:7777"
 	}
-	return &Client{BaseURL: url}
+
+	token := os.Getenv("GITANT_UCAN_TOKEN")
+	if token == "" {
+		if s, err := config.Load(); err == nil {
+			token = s.UCANToken
+		}
+	}
+
+	return &Client{BaseURL: strings.TrimRight(url, "/"), Token: token}
 }
 
-// Get performs a GET request and decodes the JSON response
-func (c *Client) Get(path string, result interface{}) error {
-	resp, err := http.Get(c.BaseURL + path)
+func (c *Client) newRequest(method, path string, body io.Reader) (*http.Request, error) {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	req, err := http.NewRequest(method, c.BaseURL+path, body)
+	if err != nil {
+		return nil, err
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	if c.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+	return req, nil
+}
+
+func (c *Client) do(req *http.Request, result interface{}) error {
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("reading response: %w", err)
 	}
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	if result != nil {
-		if err := json.Unmarshal(body, result); err != nil {
+		if err := json.Unmarshal(respBody, result); err != nil {
 			return fmt.Errorf("decoding response: %w", err)
 		}
 	}
 	return nil
 }
 
-// Post performs a POST request with a JSON body
+// Get performs a GET request and decodes the JSON response.
+func (c *Client) Get(path string, result interface{}) error {
+	req, err := c.newRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return err
+	}
+	return c.do(req, result)
+}
+
+// GetRaw performs GET and returns the raw response body.
+func (c *Client) GetRaw(path string) ([]byte, error) {
+	req, err := c.newRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
+	}
+	return body, nil
+}
+
+// Post performs a POST request with a JSON body.
 func (c *Client) Post(path string, body interface{}, result interface{}) error {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("encoding request: %w", err)
 	}
-
-	resp, err := http.Post(c.BaseURL+path, "application/json", bytes.NewReader(data))
+	req, err := c.newRequest(http.MethodPost, path, bytes.NewReader(data))
 	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
+		return err
 	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("reading response: %w", err)
-	}
-
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(respBody))
-	}
-
-	if result != nil {
-		if err := json.Unmarshal(respBody, result); err != nil {
-			return fmt.Errorf("decoding response: %w", err)
-		}
-	}
-	return nil
+	return c.do(req, result)
 }
 
-// Put performs a PUT request with a JSON body
+// Put performs a PUT request with a JSON body.
 func (c *Client) Put(path string, body interface{}, result interface{}) error {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("encoding request: %w", err)
 	}
-
-	req, err := http.NewRequest(http.MethodPut, c.BaseURL+path, bytes.NewReader(data))
+	req, err := c.newRequest(http.MethodPut, path, bytes.NewReader(data))
 	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
+		return err
 	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("reading response: %w", err)
-	}
-
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(respBody))
-	}
-
-	if result != nil {
-		if err := json.Unmarshal(respBody, result); err != nil {
-			return fmt.Errorf("decoding response: %w", err)
-		}
-	}
-	return nil
+	return c.do(req, result)
 }
 
-// Delete performs a DELETE request
+// Delete performs a DELETE request.
 func (c *Client) Delete(path string) error {
-	req, err := http.NewRequest(http.MethodDelete, c.BaseURL+path, nil)
+	req, err := c.newRequest(http.MethodDelete, path, nil)
 	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
+		return err
 	}
+	return c.do(req, nil)
+}
 
-	resp, err := http.DefaultClient.Do(req)
+// Request performs an arbitrary HTTP request with optional JSON body map.
+func (c *Client) Request(method, path string, body interface{}, result interface{}) error {
+	method = strings.ToUpper(method)
+	var reader io.Reader
+	if body != nil {
+		data, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("encoding request: %w", err)
+		}
+		reader = bytes.NewReader(data)
+	}
+	req, err := c.newRequest(method, path, reader)
 	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
+		return err
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
-	}
-	return nil
+	return c.do(req, result)
 }

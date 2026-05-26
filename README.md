@@ -19,9 +19,10 @@ go install github.com/GrayCodeAI/gitant-cli/cmd/gitant@latest
 go install github.com/GrayCodeAI/gitant-cli/cmd/git-remote-gitant@latest
 ```
 
-### From source (monorepo)
+### From source
 
 ```bash
+git clone https://github.com/GrayCodeAI/gitant-cli.git
 cd gitant-cli
 make build
 ./bin/gitant version
@@ -104,7 +105,7 @@ make test
 make build
 ```
 
-This module is self-contained. In the monorepo it lives beside `gitant-daemon`, `gitant-web`, and `gitant-mcp`.
+This repo is self-contained. For local full-stack dev, clone it beside `gitant-daemon`, `gitant-web`, and `gitant-mcp` in a folder such as `gitant-core/`.
 
 ## License
 

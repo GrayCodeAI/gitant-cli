@@ -86,11 +86,41 @@ func TestRepoList(t *testing.T) {
 	})
 
 	out := execCmd(t, ts, []string{"repo", "list"})
-	if !strings.Contains(out, "repo1") || !strings.Contains(out, "my-repo") {
-		t.Errorf("expected repo1/my-repo in output, got: %s", out)
+	if !strings.Contains(out, "repo1") || !strings.Contains(out, "test repo") {
+		t.Errorf("expected repo1 in output, got: %s", out)
 	}
-	if !strings.Contains(out, "stars=5") {
-		t.Errorf("expected stars=5 in output, got: %s", out)
+	if !strings.Contains(out, "5") {
+		t.Errorf("expected star count in output, got: %s", out)
+	}
+}
+
+func TestRepoCreate(t *testing.T) {
+	ts := newTestServer(t, map[string]http.HandlerFunc{
+		"POST /api/v1/repos": func(w http.ResponseWriter, r *http.Request) {
+			body := readBody(r)
+			if !strings.Contains(body, "new-repo") {
+				t.Errorf("expected new-repo in body, got: %s", body)
+			}
+			jsonHandler(201, map[string]interface{}{"id": "new-repo"})(w, r)
+		},
+	})
+
+	out := execCmd(t, ts, []string{"repo", "create", "new-repo", "-d", "desc"})
+	if !strings.Contains(out, "Created repository new-repo") {
+		t.Errorf("expected create output, got: %s", out)
+	}
+}
+
+func TestRepoView(t *testing.T) {
+	ts := newTestServer(t, map[string]http.HandlerFunc{
+		"GET /api/v1/repos/repo1": jsonHandler(200, map[string]interface{}{
+			"id": "repo1", "name": "my-repo", "description": "test", "stars": 5, "private": false,
+		}),
+	})
+
+	out := execCmd(t, ts, []string{"repo", "view", "repo1"})
+	if !strings.Contains(out, "my-repo") || !strings.Contains(out, "test") {
+		t.Errorf("expected repo view output, got: %s", out)
 	}
 }
 

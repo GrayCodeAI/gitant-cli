@@ -83,6 +83,31 @@ var prCreateCmd = &cobra.Command{
 	},
 }
 
+var prViewCmd = &cobra.Command{
+	Use:   "view <pr-id>",
+	Short: "View a pull request (like gh pr view)",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		repo, _ := cmd.Flags().GetString("repo")
+		jsonOut, _ := cmd.Flags().GetBool("json")
+		client := newClient(cmd)
+
+		var result map[string]interface{}
+		if err := client.Get(repoPath(repo, "/prs/"+args[0]), &result); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		if jsonOut {
+			printJSON(result)
+			return
+		}
+		fmt.Printf("title:\t%v\n", result["title"])
+		fmt.Printf("status:\t%v\n", result["status"])
+		fmt.Printf("author:\t%v\n", result["author"])
+		fmt.Printf("branches:\t%v -> %v\n", result["source_branch"], result["target_branch"])
+	},
+}
+
 var prMergeCmd = &cobra.Command{
 	Use:   "merge [pr-id]",
 	Short: "Merge a pull request",
@@ -157,11 +182,12 @@ var prCommentsCmd = &cobra.Command{
 }
 
 func init() {
-	for _, c := range []*cobra.Command{prListCmd, prCreateCmd, prMergeCmd, prReviewCmd, prCommentsCmd} {
+	for _, c := range []*cobra.Command{prListCmd, prViewCmd, prCreateCmd, prMergeCmd, prReviewCmd, prCommentsCmd} {
 		c.Flags().StringP("repo", "r", "", "Repository name (required)")
 		c.MarkFlagRequired("repo")
 		c.Flags().String("daemon-url", "", "Daemon URL (default: http://localhost:7777)")
 	}
+	prViewCmd.Flags().Bool("json", false, "Output JSON")
 	prListCmd.Flags().String("status", "", "Filter by status (open|closed|merged)")
 	prCreateCmd.Flags().StringP("title", "t", "", "PR title (required)")
 	prCreateCmd.Flags().StringP("body", "b", "", "PR body")
@@ -170,6 +196,6 @@ func init() {
 	prReviewCmd.Flags().StringP("verdict", "v", "", "Review verdict: approve|request_changes|comment (required)")
 	prReviewCmd.Flags().StringP("body", "b", "", "Review comment")
 
-	prCmd.AddCommand(prListCmd, prCreateCmd, prMergeCmd, prReviewCmd, prCommentsCmd)
+	prCmd.AddCommand(prListCmd, prViewCmd, prCreateCmd, prMergeCmd, prReviewCmd, prCommentsCmd)
 	rootCmd.AddCommand(prCmd)
 }
