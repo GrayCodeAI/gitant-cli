@@ -22,9 +22,9 @@ var bountyListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/bounties", repo)
+		path := repoPathSegments(repo, "bounties")
 		if status != "" {
-			path += "?status=" + status
+			path += "?status=" + queryEscape(status)
 		}
 
 		var result struct {
@@ -78,7 +78,7 @@ var bountyCreateCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/bounties", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "bounties"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -95,7 +95,7 @@ var bountyClaimCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/bounties/%s/claim", args[0]), nil, &result); err != nil {
+		if err := client.Post(apiPath("/api/v1/bounties", args[0], "claim"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -121,7 +121,7 @@ var bountySubmitCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/bounties/%s/submit", args[0]), req, &result); err != nil {
+		if err := client.Post(apiPath("/api/v1/bounties", args[0], "submit"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -138,7 +138,7 @@ var bountyViewCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/bounties/%s", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/bounties", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

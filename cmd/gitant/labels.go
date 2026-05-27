@@ -28,7 +28,7 @@ var labelListCmd = &cobra.Command{
 			} `json:"labels"`
 			Total int `json:"total"`
 		}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/labels", repo), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "labels"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -56,7 +56,7 @@ var labelCreateCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/labels", repo), map[string]string{"name": name, "color": color}, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "labels"), map[string]string{"name": name, "color": color}, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -78,7 +78,7 @@ var labelDeleteCmd = &cobra.Command{
 		}
 
 		client := cli.NewClient(daemonURL)
-		if err := client.Delete(fmt.Sprintf("/api/v1/repos/%s/labels/%s", repo, name)); err != nil {
+		if err := client.Delete(repoPathSegments(repo, "labels", name)); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

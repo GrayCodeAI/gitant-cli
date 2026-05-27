@@ -51,7 +51,7 @@ var agentShowCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/agents/%s", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/agents", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

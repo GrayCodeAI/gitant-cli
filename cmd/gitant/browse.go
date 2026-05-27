@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
@@ -44,8 +45,7 @@ var browseCmd = &cobra.Command{
 }
 
 func urlPathEscape(s string) string {
-	// dashboard routes use repo id as path segment
-	return s
+	return url.PathEscape(s)
 }
 
 func openBrowser(url string) error {

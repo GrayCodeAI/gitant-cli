@@ -53,7 +53,7 @@ var todoMarkCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/todos/%s/done", args[0]), nil, &result); err != nil {
+		if err := client.Post(apiPath("/api/v1/todos", args[0], "done"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

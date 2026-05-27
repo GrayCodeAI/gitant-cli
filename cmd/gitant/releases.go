@@ -52,7 +52,7 @@ var releaseViewCmd = &cobra.Command{
 		client := newClient(cmd)
 
 		var result map[string]interface{}
-		if err := client.Get(repoPath(repo, "/releases/"+args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "releases", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -90,7 +90,7 @@ var releaseDeleteCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		repo, _ := cmd.Flags().GetString("repo")
 		client := newClient(cmd)
-		if err := client.Delete(repoPath(repo, "/releases/"+args[0])); err != nil {
+		if err := client.Delete(repoPathSegments(repo, "releases", args[0])); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

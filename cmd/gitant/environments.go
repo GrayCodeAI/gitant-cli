@@ -31,7 +31,7 @@ var environmentListCmd = &cobra.Command{
 			} `json:"environments"`
 			Total int `json:"total"`
 		}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/environments", repo), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "environments"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -57,7 +57,7 @@ var environmentCreateCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/environments", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "environments"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -74,7 +74,7 @@ var environmentDeleteCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		if err := client.Delete(fmt.Sprintf("/api/v1/repos/%s/environments/%s", repo, args[0])); err != nil {
+		if err := client.Delete(repoPathSegments(repo, "environments", args[0])); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

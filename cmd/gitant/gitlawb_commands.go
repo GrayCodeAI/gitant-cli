@@ -36,7 +36,7 @@ var certListCmd = &cobra.Command{
 			} `json:"certificates"`
 			Total int `json:"total"`
 		}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/certs", repo), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "certs"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -58,7 +58,7 @@ var certShowCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/certs/%s", repo, args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "certs", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -112,7 +112,7 @@ var ipfsGetCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/ipfs/%s", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/ipfs", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -221,7 +221,7 @@ var nameResolveCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/names/%s/resolve", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/names", args[0], "resolve"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -241,7 +241,7 @@ var nameLookupCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/names/lookup?did=%s", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/names/lookup")+"?did="+queryEscape(args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -263,7 +263,7 @@ var nameAvailableCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/names/%s/available", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/names", args[0], "available"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -304,7 +304,7 @@ var nameResolveDidCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/names/did/%s", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/names/did", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -330,7 +330,7 @@ var starAddCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/star", args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(args[0], "star"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -347,7 +347,7 @@ var starRemoveCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/unstar", args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(args[0], "unstar"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -364,7 +364,7 @@ var starCountCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/stars", args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(args[0], "stars"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -383,7 +383,7 @@ var changelogCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/changelog?limit=%d", args[0], limit)
+		path := repoPathSegments(args[0], "changelog") + fmt.Sprintf("?limit=%d", limit)
 
 		var result struct {
 			Events []struct {

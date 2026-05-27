@@ -24,7 +24,10 @@ var quickstartCmd = &cobra.Command{
 		fmt.Println()
 
 		// 1. Data directory
-		home, _ := os.UserHomeDir()
+		home, err := os.UserHomeDir()
+		if err != nil {
+			home = "."
+		}
 		defaultDataDir := filepath.Join(home, ".gitant")
 		dataDir := defaultDataDir
 

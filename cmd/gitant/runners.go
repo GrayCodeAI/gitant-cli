@@ -22,9 +22,9 @@ var runnerListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/runners", repo)
+		path := repoPathSegments(repo, "runners")
 		if status != "" {
-			path += "?status=" + status
+			path += "?status=" + queryEscape(status)
 		}
 
 		var result struct {
@@ -69,7 +69,7 @@ var runnerRegisterCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/runners", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "runners"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -87,7 +87,7 @@ var runnerUnregisterCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		if err := client.Delete(fmt.Sprintf("/api/v1/repos/%s/runners/%s", repo, args[0])); err != nil {
+		if err := client.Delete(repoPathSegments(repo, "runners", args[0])); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -105,7 +105,7 @@ var runnerStatusCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/runners/%s", repo, args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "runners", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

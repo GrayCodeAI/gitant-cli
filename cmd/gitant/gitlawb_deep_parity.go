@@ -1,13 +1,35 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/GrayCodeAI/gitant-cli/internal/cli"
 	"github.com/spf13/cobra"
 )
+
+// readSecretFromStdin reads a secret value from stdin, trimming trailing whitespace.
+func readSecretFromStdin() (string, error) {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return "", fmt.Errorf("failed to stat stdin: %w", err)
+	}
+	if (stat.Mode() & os.ModeCharDevice) != 0 {
+		// stdin is a terminal, prompt the user
+		fmt.Fprint(os.Stderr, "Enter secret value: ")
+	}
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return "", err
+		}
+		return "", fmt.Errorf("no input received")
+	}
+	return strings.TrimSpace(scanner.Text()), nil
+}
 
 // DID methods — did:key, did:web, did:gitlawb
 
@@ -20,7 +42,7 @@ var identityResolveCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/identity/resolve/%s", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/identity/resolve", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -65,7 +87,7 @@ var certThresholdCmd = &cobra.Command{
 		client := cli.NewClient(daemonURL)
 		req := map[string]interface{}{"threshold": args[1]}
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/certs/threshold", args[0]), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(args[0], "certs", "threshold"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -87,7 +109,7 @@ var certSignCmd = &cobra.Command{
 			"new_oid": args[3],
 		}
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/certs/sign", args[0]), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(args[0], "certs", "sign"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -121,7 +143,7 @@ var secretsListCmd = &cobra.Command{
 			} `json:"secrets"`
 			Total int `json:"total"`
 		}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/secrets", repo), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "secrets"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -134,17 +156,25 @@ var secretsListCmd = &cobra.Command{
 }
 
 var secretsSetCmd = &cobra.Command{
-	Use:   "set <name> <value>",
-	Short: "Set a secret (encrypted at rest, capability-bound)",
-	Args:  cobra.ExactArgs(2),
+	Use:   "set <name>",
+	Short: "Set a secret (reads value from stdin to avoid exposing it in process list)",
+	Long:  "Set a secret value. The value is read from stdin to avoid exposing it in shell history or process listings. Example: echo 'my-secret' | gt secrets set MY_SECRET",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		repo, _ := cmd.Flags().GetString("repo")
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
+		// Read secret value from stdin
+		value, err := readSecretFromStdin()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading secret value: %v\n", err)
+			os.Exit(1)
+		}
+
 		client := cli.NewClient(daemonURL)
-		req := map[string]string{"name": args[0], "value": args[1]}
+		req := map[string]string{"name": args[0], "value": value}
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/secrets", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "secrets"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -161,7 +191,7 @@ var secretsDeleteCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		if err := client.Delete(fmt.Sprintf("/api/v1/repos/%s/secrets/%s", repo, args[0])); err != nil {
+		if err := client.Delete(repoPathSegments(repo, "secrets", args[0])); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -179,7 +209,7 @@ var secretsGetCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/secrets/%s", repo, args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "secrets", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -206,7 +236,7 @@ var trustShowCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/agents/%s/trust", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/agents", args[0], "trust"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -237,7 +267,7 @@ var trustIssueCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/agents/%s/trust/issue", args[0]), nil, &result); err != nil {
+		if err := client.Post(apiPath("/api/v1/agents", args[0], "trust", "issue"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -288,7 +318,7 @@ var repoTokenizeCmd = &cobra.Command{
 		client := cli.NewClient(daemonURL)
 		req := map[string]string{"name": name, "symbol": symbol}
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/tokenize", args[0]), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(args[0], "tokenize"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -326,7 +356,7 @@ var maintainersListCmd = &cobra.Command{
 				Threshold int    `json:"threshold"`
 			} `json:"maintainers"`
 		}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/maintainers", repo), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "maintainers"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -348,7 +378,7 @@ var maintainersAddCmd = &cobra.Command{
 		client := cli.NewClient(daemonURL)
 		req := map[string]string{"did": args[0]}
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/maintainers", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "maintainers"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -365,7 +395,7 @@ var maintainersRemoveCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		if err := client.Delete(fmt.Sprintf("/api/v1/repos/%s/maintainers/%s", repo, args[0])); err != nil {
+		if err := client.Delete(repoPathSegments(repo, "maintainers", args[0])); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

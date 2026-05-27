@@ -131,7 +131,7 @@ var nodeTrustCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/agents/%s/trust", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/agents", args[0], "trust"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -159,7 +159,7 @@ var nodeResolveCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/agents/resolve/%s", args[0]), &result); err != nil {
+		if err := client.Get(apiPath("/api/v1/agents/resolve", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -201,7 +201,11 @@ var peerListCmd = &cobra.Command{
 			if p.Connected {
 				status = "connected"
 			}
-			fmt.Printf("%s\t%s\t%s\n", p.ID[:12], status, p.Multiaddrs)
+			shortID := p.ID
+			if len(shortID) > 12 {
+				shortID = shortID[:12]
+			}
+			fmt.Printf("%s\t%s\t%s\n", shortID, status, p.Multiaddrs)
 		}
 		fmt.Fprintf(os.Stderr, "%d peer(s)\n", result.Total)
 	},
@@ -237,7 +241,7 @@ var bountyApproveCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/bounties/%s/approve", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "bounties", args[0], "approve"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -255,7 +259,7 @@ var bountyCancelCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/bounties/%s/cancel", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "bounties", args[0], "cancel"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -272,7 +276,7 @@ var bountyStatsCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/bounties/stats", repo), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "bounties", "stats"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -294,7 +298,7 @@ var taskFailCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/tasks/%s/fail", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "tasks", args[0], "fail"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -314,7 +318,7 @@ var certVerifyCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/certs/%s/verify", repo, args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "certs", args[0], "verify"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

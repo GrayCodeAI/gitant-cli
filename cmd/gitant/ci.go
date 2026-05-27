@@ -22,9 +22,9 @@ var ciListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/actions/runs", repo)
+		path := repoPathSegments(repo, "actions", "runs")
 		if status != "" {
-			path += "?status=" + status
+			path += "?status=" + queryEscape(status)
 		}
 
 		var result struct {
@@ -43,7 +43,7 @@ var ciListCmd = &cobra.Command{
 		}
 
 		for _, run := range result.Runs {
-			fmt.Printf("%s\t%s\t%s\t%s\t%s\n", run.ID, run.Status, run.Branch, run.CommitSHA[:8], run.StartedAt)
+			fmt.Printf("%s\t%s\t%s\t%s\t%s\n", run.ID, run.Status, run.Branch, shortSHA(run.CommitSHA), run.StartedAt)
 		}
 		fmt.Fprintf(os.Stderr, "%d pipeline(s)\n", result.Total)
 	},
@@ -59,7 +59,7 @@ var ciViewCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/actions/runs/%s", repo, args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "actions", "runs", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -82,7 +82,7 @@ var ciLogsCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/actions/runs/%s", repo, args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "actions", "runs", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -109,7 +109,7 @@ var ciRetryCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/actions/runs/%s/retry", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "actions", "runs", args[0], "retry"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -127,7 +127,7 @@ var ciCancelCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/actions/runs/%s/cancel", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "actions", "runs", args[0], "cancel"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -155,7 +155,7 @@ var ciStatusCmd = &cobra.Command{
 				Status string `json:"status"`
 			} `json:"runs"`
 		}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/actions/runs?branch=%s&limit=1", repo, branch), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "actions", "runs")+"?branch="+queryEscape(branch)+"&limit=1", &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -168,6 +168,14 @@ var ciStatusCmd = &cobra.Command{
 		run := result.Runs[0]
 		fmt.Printf("Pipeline %s: %s\n", run.ID, run.Status)
 	},
+}
+
+// shortSHA safely truncates a commit SHA to 8 characters.
+func shortSHA(sha string) string {
+	if len(sha) <= 8 {
+		return sha
+	}
+	return sha[:8]
 }
 
 func getCurrentBranch() string {

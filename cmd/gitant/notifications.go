@@ -63,7 +63,7 @@ var notificationReadCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/notifications/%s/read", args[0]), nil, &result); err != nil {
+		if err := client.Post(apiPath("/api/v1/notifications", args[0], "read"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

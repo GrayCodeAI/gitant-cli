@@ -8,9 +8,16 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/GrayCodeAI/gitant-cli/internal/config"
 )
+
+const (
+	maxResponseBody = 10 << 20 // 10 MB
+)
+
+var httpClient = &http.Client{Timeout: 30 * time.Second}
 
 // Client is an HTTP client for the gitant daemon API.
 type Client struct {
@@ -60,13 +67,13 @@ func (c *Client) newRequest(method, path string, body io.Reader) (*http.Request,
 }
 
 func (c *Client) do(req *http.Request, result interface{}) error {
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBody))
 	if err != nil {
 		return fmt.Errorf("reading response: %w", err)
 	}
@@ -98,12 +105,12 @@ func (c *Client) GetRaw(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBody))
 	if err != nil {
 		return nil, err
 	}

@@ -40,6 +40,30 @@ func repoPath(repo, suffix string) string {
 	return fmt.Sprintf("/api/v1/repos/%s%s", url.PathEscape(repo), suffix)
 }
 
+// repoPathSegments builds an escaped URL path from repo and additional segments.
+// Each segment is url.PathEscape'd. Query params should be appended separately.
+func repoPathSegments(repo string, segments ...string) string {
+	path := "/api/v1/repos/" + url.PathEscape(repo)
+	for _, s := range segments {
+		path += "/" + url.PathEscape(s)
+	}
+	return path
+}
+
+// apiPath builds an escaped URL path from a base and segments.
+func apiPath(base string, segments ...string) string {
+	path := base
+	for _, s := range segments {
+		path += "/" + url.PathEscape(s)
+	}
+	return path
+}
+
+// queryEscape is a convenience wrapper for url.QueryEscape.
+func queryEscape(s string) string {
+	return url.QueryEscape(s)
+}
+
 func webBaseURL() string {
 	if u := os.Getenv("GITANT_WEB_URL"); u != "" {
 		return trimRightSlash(u)

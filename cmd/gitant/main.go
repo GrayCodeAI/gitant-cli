@@ -93,7 +93,10 @@ var backupCmd = &cobra.Command{
 		outputDir, _ := cmd.Flags().GetString("output")
 
 		if dataDir == "" {
-			home, _ := os.UserHomeDir()
+			home, err := os.UserHomeDir()
+			if err != nil {
+				home = "."
+			}
 			dataDir = filepath.Join(home, ".gitant")
 		}
 
@@ -112,7 +115,7 @@ var backupCmd = &cobra.Command{
 			dst := filepath.Join(backupDir, name)
 
 			info, err := os.Stat(src)
-			if os.IsNotExist(err) {
+			if err != nil {
 				continue
 			}
 
@@ -144,7 +147,10 @@ var restoreCmd = &cobra.Command{
 		inputDir, _ := cmd.Flags().GetString("input")
 
 		if dataDir == "" {
-			home, _ := os.UserHomeDir()
+			home, err := os.UserHomeDir()
+			if err != nil {
+				home = "."
+			}
 			dataDir = filepath.Join(home, ".gitant")
 		}
 
@@ -257,6 +263,12 @@ func init() {
 }
 
 func main() {
+	// Expand aliases before cobra processes args
+	if len(os.Args) > 1 {
+		expanded := ExpandAlias(os.Args[1:])
+		os.Args = append([]string{os.Args[0]}, expanded...)
+	}
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

@@ -16,73 +16,12 @@ type GitObject struct {
 	Hash    plumbing.Hash
 }
 
-// PackfileReader reads git objects from a packfile
-type PackfileReader struct {
-	storage *memory.Storage
-}
-
-// NewPackfileReader creates a new packfile reader
-func NewPackfileReader() *PackfileReader {
-	return &PackfileReader{
-		storage: memory.NewStorage(),
-	}
-}
-
-// ReadPackfile reads a packfile and returns the objects it contains.
-func (r *PackfileReader) ReadPackfile(data []byte) ([]*GitObject, error) {
-	ms := memory.NewStorage()
-
-	reader := bytes.NewReader(data)
-	parser := packfile.NewParser(reader, packfile.WithStorage(ms))
-
-	_, err := parser.Parse()
-	if err != nil {
-		return nil, fmt.Errorf("parsing packfile: %w", err)
-	}
-
-	var objects []*GitObject
-	err = ms.ForEachObjectHash(func(hash plumbing.Hash) error {
-		obj, err := ms.EncodedObject(plumbing.AnyObject, hash)
-		if err != nil {
-			return nil
-		}
-
-		rdr, err := obj.Reader()
-		if err != nil {
-			return nil
-		}
-		defer rdr.Close()
-
-		content := make([]byte, obj.Size())
-		n, err := rdr.Read(content)
-		if err != nil && n == 0 {
-			return nil
-		}
-
-		objects = append(objects, &GitObject{
-			Type:    obj.Type(),
-			Content: content[:n],
-			Hash:    hash,
-		})
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("iterating objects: %w", err)
-	}
-
-	return objects, nil
-}
-
 // PackfileWriter writes git objects to a packfile
-type PackfileWriter struct {
-	storage *memory.Storage
-}
+type PackfileWriter struct{}
 
 // NewPackfileWriter creates a new packfile writer
 func NewPackfileWriter() *PackfileWriter {
-	return &PackfileWriter{
-		storage: memory.NewStorage(),
-	}
+	return &PackfileWriter{}
 }
 
 // WritePackfile writes a set of git objects to a packfile using go-git's encoder.

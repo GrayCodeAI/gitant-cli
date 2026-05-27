@@ -22,7 +22,7 @@ var issueListCmd = &cobra.Command{
 		client := newClient(cmd)
 		path := repoPath(repo, "/issues")
 		if status != "" {
-			path += "?status=" + status
+			path += "?status=" + queryEscape(status)
 		}
 
 		var result struct {
@@ -59,7 +59,7 @@ var issueViewCmd = &cobra.Command{
 		client := newClient(cmd)
 
 		var result map[string]interface{}
-		if err := client.Get(repoPath(repo, "/issues/"+args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "issues", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -116,7 +116,7 @@ var issueCloseCmd = &cobra.Command{
 		repo, _ := cmd.Flags().GetString("repo")
 		client := newClient(cmd)
 		var result map[string]interface{}
-		if err := client.Post(repoPath(repo, "/issues/"+args[0]+"/close"), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "issues", args[0], "close"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -139,7 +139,7 @@ var issueCommentCmd = &cobra.Command{
 
 		client := newClient(cmd)
 		var result map[string]interface{}
-		if err := client.Post(repoPath(repo, "/issues/"+args[0]+"/comment"), map[string]string{"body": body}, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "issues", args[0], "comment"), map[string]string{"body": body}, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -163,7 +163,7 @@ var issueCommentsCmd = &cobra.Command{
 			} `json:"comments"`
 			Total int `json:"total"`
 		}
-		if err := client.Get(repoPath(repo, "/issues/"+args[0]+"/comments"), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "issues", args[0], "comments"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

@@ -268,7 +268,7 @@ var gitBranchListCmd = &cobra.Command{
 					Commit string `json:"commit"`
 				} `json:"refs"`
 			}
-			if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/refs", repo), &result); err != nil {
+			if err := client.Get(repoPathSegments(repo, "refs"), &result); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
@@ -276,7 +276,7 @@ var gitBranchListCmd = &cobra.Command{
 			for _, ref := range result.Refs {
 				if strings.HasPrefix(ref.Name, "refs/heads/") {
 					branch := strings.TrimPrefix(ref.Name, "refs/heads/")
-					fmt.Printf("%s\t%s\n", branch, ref.Commit[:8])
+					fmt.Printf("%s\t%s\n", branch, shortSHA(ref.Commit))
 				}
 			}
 		} else {
@@ -304,7 +304,7 @@ var gitBranchCreateCmd = &cobra.Command{
 			client := cli.NewClient(daemonURL)
 			req := map[string]string{"name": args[0]}
 			var result map[string]interface{}
-			if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/branches", repo), req, &result); err != nil {
+			if err := client.Post(repoPathSegments(repo, "branches"), req, &result); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
@@ -336,7 +336,7 @@ var gitBranchDeleteCmd = &cobra.Command{
 		} else {
 			deleteArgs = append(deleteArgs, "-d")
 		}
-		deleteArgs = append(deleteArgs, args[0])
+		deleteArgs = append(deleteArgs, "--", args[0])
 
 		delete := exec.Command("git", deleteArgs...)
 		delete.Stdout = os.Stdout
@@ -406,7 +406,7 @@ var gitTagDeleteCmd = &cobra.Command{
 	Short: "Delete a tag",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		delete := exec.Command("git", "tag", "-d", args[0])
+		delete := exec.Command("git", "tag", "-d", "--", args[0])
 		delete.Stdout = os.Stdout
 		delete.Stderr = os.Stderr
 		if err := delete.Run(); err != nil {
@@ -430,7 +430,7 @@ var gitLogCmd = &cobra.Command{
 		if repo != "" {
 			// Get from server
 			client := cli.NewClient(daemonURL)
-			path := fmt.Sprintf("/api/v1/repos/%s/commits?limit=%d", repo, limit)
+			path := repoPathSegments(repo, "commits") + fmt.Sprintf("?limit=%d", limit)
 
 			var result struct {
 				Commits []struct {
@@ -447,7 +447,7 @@ var gitLogCmd = &cobra.Command{
 
 			for _, c := range result.Commits {
 				if oneline {
-					fmt.Printf("%s %s\n", c.Hash[:8], strings.Split(c.Message, "\n")[0])
+					fmt.Printf("%s %s\n", shortSHA(c.Hash), strings.Split(c.Message, "\n")[0])
 				} else {
 					fmt.Printf("commit %s\nAuthor: %s\nDate: %s\n\n    %s\n\n", c.Hash, c.Author, c.Date, c.Message)
 				}
@@ -484,7 +484,7 @@ var gitDiffCmd = &cobra.Command{
 		if repo != "" && len(args) >= 2 {
 			// Get from server
 			client := cli.NewClient(daemonURL)
-			path := fmt.Sprintf("/api/v1/repos/%s/diff?from=%s&to=%s", repo, args[0], args[1])
+			path := repoPathSegments(repo, "diff") + "?from=" + queryEscape(args[0]) + "&to=" + queryEscape(args[1])
 
 			var result struct {
 				Files []struct {
@@ -541,7 +541,7 @@ var gitShowCmd = &cobra.Command{
 		if repo != "" {
 			// Get from server
 			client := cli.NewClient(daemonURL)
-			path := fmt.Sprintf("/api/v1/repos/%s/commits/%s", repo, args[0])
+			path := repoPathSegments(repo, "commits", args[0])
 
 			var result map[string]interface{}
 			if err := client.Get(path, &result); err != nil {
@@ -554,7 +554,7 @@ var gitShowCmd = &cobra.Command{
 			fmt.Printf("Date: %v\n\n", result["date"])
 			fmt.Printf("    %v\n", result["message"])
 		} else {
-			out, err := exec.Command("git", "show", args[0]).Output()
+			out, err := exec.Command("git", "show", "--", args[0]).Output()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
@@ -627,7 +627,7 @@ var gitBlameCmd = &cobra.Command{
 		if repo != "" {
 			// Get from server
 			client := cli.NewClient(daemonURL)
-			path := fmt.Sprintf("/api/v1/repos/%s/files/%s/blame", repo, args[0])
+			path := repoPathSegments(repo, "files", args[0], "blame")
 
 			var result struct {
 				Lines []struct {
@@ -645,7 +645,7 @@ var gitBlameCmd = &cobra.Command{
 				fmt.Printf("%s %4d\t%s\n", l.Author, l.Line, l.Content)
 			}
 		} else {
-			out, err := exec.Command("git", "blame", args[0]).Output()
+			out, err := exec.Command("git", "blame", "--", args[0]).Output()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
@@ -667,7 +667,7 @@ var gitGrepCmd = &cobra.Command{
 		if repo != "" {
 			// Search on server
 			client := cli.NewClient(daemonURL)
-			path := fmt.Sprintf("/api/v1/repos/%s/search?q=%s", repo, args[0])
+			path := repoPathSegments(repo, "search") + "?q=" + queryEscape(args[0])
 
 			var result struct {
 				Results []struct {
@@ -685,7 +685,7 @@ var gitGrepCmd = &cobra.Command{
 				fmt.Printf("%s:%d: %s\n", r.Path, r.Line, r.Content)
 			}
 		} else {
-			out, err := exec.Command("git", "grep", args[0]).Output()
+			out, err := exec.Command("git", "grep", "--", args[0]).Output()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)

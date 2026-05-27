@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"path"
+	"strings"
 
 	"github.com/GrayCodeAI/gitant-cli/internal/cli"
 	"github.com/spf13/cobra"
@@ -59,7 +62,11 @@ var mirrorGithubCmd = &cobra.Command{
 		private, _ := cmd.Flags().GetBool("private")
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
-		sourceURL := fmt.Sprintf("https://github.com/%s.git", args[0])
+		escapedParts := strings.SplitN(args[0], "/", 2)
+		for i := range escapedParts {
+			escapedParts[i] = url.PathEscape(escapedParts[i])
+		}
+		sourceURL := "https://github.com/" + strings.Join(escapedParts, "/") + ".git"
 
 		if name == "" {
 			name = extractRepoName(sourceURL)
@@ -92,7 +99,11 @@ var mirrorGitlabCmd = &cobra.Command{
 		private, _ := cmd.Flags().GetBool("private")
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
-		sourceURL := fmt.Sprintf("https://gitlab.com/%s.git", args[0])
+		escapedParts := strings.SplitN(args[0], "/", 2)
+		for i := range escapedParts {
+			escapedParts[i] = url.PathEscape(escapedParts[i])
+		}
+		sourceURL := "https://gitlab.com/" + strings.Join(escapedParts, "/") + ".git"
 
 		if name == "" {
 			name = extractRepoName(sourceURL)
@@ -116,20 +127,37 @@ var mirrorGitlabCmd = &cobra.Command{
 	},
 }
 
-func extractRepoName(url string) string {
-	// Remove trailing .git
-	if len(url) > 4 && url[len(url)-4:] == ".git" {
-		url = url[:len(url)-4]
-	}
-
-	// Extract last path component
-	for i := len(url) - 1; i >= 0; i-- {
-		if url[i] == '/' {
-			return url[i+1:]
+func extractRepoName(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err == nil && u.Path != "" {
+		// Strip trailing slash, then take the last path segment.
+		base := path.Base(strings.TrimSuffix(u.Path, "/"))
+		// Remove trailing .git
+		if strings.HasSuffix(base, ".git") {
+			base = strings.TrimSuffix(base, ".git")
+		}
+		if base != "" && base != "." {
+			return base
 		}
 	}
 
-	return url
+	// Fallback: best-effort on opaque strings.
+	s := rawURL
+	if idx := strings.Index(s, "?"); idx != -1 {
+		s = s[:idx]
+	}
+	if idx := strings.Index(s, "#"); idx != -1 {
+		s = s[:idx]
+	}
+	if strings.HasSuffix(s, ".git") {
+		s = strings.TrimSuffix(s, ".git")
+	}
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == '/' {
+			return s[i+1:]
+		}
+	}
+	return s
 }
 
 func init() {

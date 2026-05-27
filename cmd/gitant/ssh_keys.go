@@ -89,7 +89,7 @@ var sshKeyDeleteCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		if err := client.Delete(fmt.Sprintf("/api/v1/user/keys/%s", args[0])); err != nil {
+		if err := client.Delete(apiPath("/api/v1/user/keys", args[0])); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

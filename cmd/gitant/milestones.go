@@ -22,9 +22,9 @@ var milestoneListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/milestones", repo)
+		path := repoPathSegments(repo, "milestones")
 		if status != "" {
-			path += "?status=" + status
+			path += "?status=" + queryEscape(status)
 		}
 
 		var result struct {
@@ -72,7 +72,7 @@ var milestoneCreateCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/milestones", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "milestones"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -90,7 +90,7 @@ var milestoneViewCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/milestones/%s", repo, args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "milestones", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -112,7 +112,7 @@ var milestoneCloseCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/milestones/%s/close", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "milestones", args[0], "close"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

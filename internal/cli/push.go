@@ -3,12 +3,13 @@ package cli
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
+	"net/url"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/filemode"
 	"github.com/go-git/go-git/v6/plumbing/object"
-	"github.com/go-git/go-git/v6/storage/memory"
 	"github.com/GrayCodeAI/gitant-cli/internal/packfile"
 )
 
@@ -26,29 +27,56 @@ type GitObject struct {
 	Content string `json:"content"` // base64
 }
 
-// Push performs a packfile-based push from a local repo to the daemon
-func Push(repoPath, daemonURL, repoID string) error {
+// Push performs a packfile-based push from a local repo to the daemon.
+// If refNames is non-empty, only the specified refs are pushed; otherwise all branches and tags are pushed.
+func Push(repoPath, daemonURL, repoID string, refNames ...string) error {
 	repo, err := git.PlainOpen(repoPath)
 	if err != nil {
 		return fmt.Errorf("opening git repo: %w", err)
 	}
 
-	// Get all local refs
+	// Build set of refs to push
+	pushRefs := make(map[string]bool)
+	for _, name := range refNames {
+		pushRefs[name] = true
+	}
+
+	// Get local refs
 	refs, err := repo.References()
 	if err != nil {
 		return fmt.Errorf("listing refs: %w", err)
 	}
 
+	// Fetch current remote refs to populate OldHash for conflict detection
+	client := NewClient(daemonURL)
+	remoteRefs := make(map[string]string)
+	var remoteResult struct {
+		Refs []struct {
+			Name string `json:"name"`
+			Hash string `json:"hash"`
+		} `json:"refs"`
+	}
+	if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/refs", url.PathEscape(repoID)), &remoteResult); err == nil {
+		for _, r := range remoteResult.Refs {
+			remoteRefs[r.Name] = r.Hash
+		}
+	}
+
 	var updates []RefUpdate
 	var commitHashes []plumbing.Hash
 	refs.ForEach(func(ref *plumbing.Reference) error {
-		if ref.Name().IsBranch() || ref.Name().IsTag() {
-			updates = append(updates, RefUpdate{
-				Name:    ref.Name().String(),
-				NewHash: ref.Hash().String(),
-			})
-			commitHashes = append(commitHashes, ref.Hash())
+		if !ref.Name().IsBranch() && !ref.Name().IsTag() {
+			return nil
 		}
+		if len(pushRefs) > 0 && !pushRefs[ref.Name().String()] {
+			return nil
+		}
+		updates = append(updates, RefUpdate{
+			Name:    ref.Name().String(),
+			OldHash: remoteRefs[ref.Name().String()],
+			NewHash: ref.Hash().String(),
+		})
+		commitHashes = append(commitHashes, ref.Hash())
 		return nil
 	})
 
@@ -69,7 +97,6 @@ func Push(repoPath, daemonURL, repoID string) error {
 		return fmt.Errorf("creating packfile: %w", err)
 	}
 
-	client := NewClient(daemonURL)
 	var result struct {
 		Success bool     `json:"success"`
 		Repo    string   `json:"repo"`
@@ -77,7 +104,7 @@ func Push(repoPath, daemonURL, repoID string) error {
 	}
 
 	// Send packfile to server
-	err = client.Post(fmt.Sprintf("/api/v1/repos/%s/push-packfile", repoID), map[string]interface{}{
+	err = client.Post(fmt.Sprintf("/api/v1/repos/%s/push-packfile", url.PathEscape(repoID)), map[string]interface{}{
 		"packfile":    base64.StdEncoding.EncodeToString(packfileBytes),
 		"ref_updates": updates,
 	}, &result)
@@ -217,7 +244,7 @@ func encodeObject(hash plumbing.Hash, objType string, repo *git.Repository) (Git
 	defer reader.Close()
 
 	buf := make([]byte, obj.Size())
-	if _, err := reader.Read(buf); err != nil {
+	if _, err := io.ReadFull(reader, buf); err != nil {
 		return GitObject{}, err
 	}
 
@@ -227,6 +254,3 @@ func encodeObject(hash plumbing.Hash, objType string, repo *git.Repository) (Git
 		Content: base64.StdEncoding.EncodeToString(buf),
 	}, nil
 }
-
-// Ensure memory import is used (for go-git dependency)
-var _ = memory.NewStorage()

@@ -20,7 +20,10 @@ var doctorCmd = &cobra.Command{
 		dataDir, _ := cmd.Flags().GetString("data-dir")
 
 		if dataDir == "" {
-			home, _ := os.UserHomeDir()
+			home, err := os.UserHomeDir()
+			if err != nil {
+				home = "."
+			}
 			dataDir = filepath.Join(home, ".gitant")
 		}
 
@@ -52,6 +55,9 @@ var doctorCmd = &cobra.Command{
 		// 1. Daemon connectivity
 		fmt.Println("\nDaemon:")
 		resp, err := http.Get(daemonURL + "/health")
+		if resp != nil {
+			defer resp.Body.Close()
+		}
 		check("Daemon reachable", err == nil && resp != nil && resp.StatusCode == 200,
 			func() string {
 				if err != nil {

@@ -22,9 +22,9 @@ var forumListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/forum", repo)
+		path := repoPathSegments(repo, "forum")
 		if category != "" {
-			path += "?category=" + category
+			path += "?category=" + queryEscape(category)
 		}
 
 		var result struct {
@@ -75,7 +75,7 @@ var forumCreateCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/forum", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "forum"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -108,7 +108,7 @@ var chatSendCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/chat", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "chat"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -126,7 +126,7 @@ var chatReadCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/chat/%s?limit=%d", repo, channel, limit)
+		path := repoPathSegments(repo, "chat", channel) + fmt.Sprintf("?limit=%d", limit)
 
 		var result struct {
 			Messages []struct {
@@ -168,7 +168,7 @@ var workspaceListCmd = &cobra.Command{
 				Branch string `json:"branch"`
 			} `json:"workspaces"`
 		}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/workspaces", repo), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "workspaces"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -199,7 +199,7 @@ var workspaceCreateCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/workspaces", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "workspaces"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -222,9 +222,9 @@ var serviceDeskListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/tickets", repo)
+		path := repoPathSegments(repo, "tickets")
 		if status != "" {
-			path += "?status=" + status
+			path += "?status=" + queryEscape(status)
 		}
 
 		var result struct {
@@ -270,7 +270,7 @@ var timeStartCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/time/start", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "time", "start"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -288,7 +288,7 @@ var timeStopCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/time/%s/stop", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "time", args[0], "stop"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -305,7 +305,7 @@ var timeSummaryCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/time/summary", repo), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "time", "summary"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -331,9 +331,9 @@ var governanceListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/proposals", repo)
+		path := repoPathSegments(repo, "proposals")
 		if status != "" {
-			path += "?status=" + status
+			path += "?status=" + queryEscape(status)
 		}
 
 		var result struct {
@@ -375,7 +375,7 @@ var governanceVoteCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/proposals/%s/vote", repo, args[0]), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "proposals", args[0], "vote"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

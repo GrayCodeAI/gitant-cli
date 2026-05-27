@@ -23,9 +23,9 @@ var variableListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/variables", repo)
+		path := repoPathSegments(repo, "variables")
 		if environment != "" {
-			path += "?environment=" + environment
+			path += "?environment=" + queryEscape(environment)
 		}
 
 		var result struct {
@@ -84,7 +84,7 @@ var variableCreateCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/variables", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "variables"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -113,7 +113,7 @@ var variableUpdateCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/variables/%s", repo, args[0]), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "variables", args[0]), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -131,9 +131,9 @@ var variableDeleteCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/variables/%s", repo, args[0])
+		path := repoPathSegments(repo, "variables", args[0])
 		if environment != "" {
-			path += "?environment=" + environment
+			path += "?environment=" + queryEscape(environment)
 		}
 
 		if err := client.Delete(path); err != nil {

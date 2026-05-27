@@ -23,9 +23,9 @@ var prListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/prs", repo)
+		path := repoPathSegments(repo, "prs")
 		if status != "" {
-			path += "?status=" + status
+			path += "?status=" + queryEscape(status)
 		}
 
 		var result struct {
@@ -76,7 +76,7 @@ var prCreateCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/prs", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "prs"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -94,7 +94,7 @@ var prViewCmd = &cobra.Command{
 		client := newClient(cmd)
 
 		var result map[string]interface{}
-		if err := client.Get(repoPath(repo, "/prs/"+args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "prs", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -119,7 +119,7 @@ var prMergeCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/prs/%s/merge", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "prs", args[0], "merge"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -144,7 +144,7 @@ var prReviewCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/prs/%s/review", repo, args[0]), map[string]string{"verdict": verdict, "body": body}, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "prs", args[0], "review"), map[string]string{"verdict": verdict, "body": body}, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -170,7 +170,7 @@ var prCommentsCmd = &cobra.Command{
 			} `json:"comments"`
 			Total int `json:"total"`
 		}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/prs/%s/comments", repo, args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "prs", args[0], "comments"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -192,7 +192,7 @@ var prCheckoutCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/prs/%s", repo, args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "prs", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -225,7 +225,7 @@ var prDiffCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/prs/%s", repo, args[0]), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "prs", args[0]), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -258,7 +258,7 @@ var prCloseCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/prs/%s/close", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "prs", args[0], "close"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -276,7 +276,7 @@ var prReadyCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/prs/%s/ready", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "prs", args[0], "ready"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

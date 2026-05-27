@@ -10,12 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Alias represents a CLI alias
-type Alias struct {
-	Name    string `json:"name"`
-	Command string `json:"command"`
-}
-
 // AliasStore manages CLI aliases
 type AliasStore struct {
 	path    string
@@ -24,7 +18,10 @@ type AliasStore struct {
 
 // NewAliasStore creates a new alias store
 func NewAliasStore() *AliasStore {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "."
+	}
 	path := filepath.Join(home, ".gitant", "aliases.json")
 
 	store := &AliasStore{
@@ -40,12 +37,16 @@ func (s *AliasStore) load() {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(data, &s.aliases)
+	if err := json.Unmarshal(data, &s.aliases); err != nil {
+		s.aliases = make(map[string]string)
+	}
 }
 
 func (s *AliasStore) save() error {
 	dir := filepath.Dir(s.path)
-	os.MkdirAll(dir, 0755)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("creating alias directory: %w", err)
+	}
 
 	data, err := json.MarshalIndent(s.aliases, "", "  ")
 	if err != nil {

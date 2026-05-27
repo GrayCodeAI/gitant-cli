@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -22,7 +23,7 @@ func Clone(daemonURL, repoID, localPath string) error {
 			Hash string `json:"hash"`
 		} `json:"refs"`
 	}
-	if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/clone", repoID), &repoInfo); err != nil {
+	if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/clone", url.PathEscape(repoID)), &repoInfo); err != nil {
 		return fmt.Errorf("fetching repo info: %w", err)
 	}
 
@@ -66,7 +67,7 @@ func fetchObjectRecursive(client *Client, repoID string, repo *git.Repository, h
 		Type    string `json:"type"`
 		Content []byte `json:"content"`
 	}
-	if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/objects/%s", repoID, hashStr), &obj); err != nil {
+	if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/objects/%s", url.PathEscape(repoID), url.PathEscape(hashStr)), &obj); err != nil {
 		return err
 	}
 
@@ -90,7 +91,9 @@ func fetchObjectRecursive(client *Client, repoID string, repo *git.Repository, h
 	if err != nil {
 		return err
 	}
-	writer.Write(obj.Content)
+	if _, err := writer.Write(obj.Content); err != nil {
+		return err
+	}
 	if _, err := repo.Storer.SetEncodedObject(enc); err != nil {
 		return err
 	}
@@ -102,10 +105,14 @@ func fetchObjectRecursive(client *Client, repoID string, repo *git.Repository, h
 		for _, line := range strings.Split(contentStr, "\n") {
 			if strings.HasPrefix(line, "tree ") {
 				treeHash := strings.TrimPrefix(line, "tree ")
-				fetchObjectRecursive(client, repoID, repo, treeHash, seen)
+				if err := fetchObjectRecursive(client, repoID, repo, treeHash, seen); err != nil {
+					fmt.Fprintf(Stderr(), "warning: failed to fetch tree %s: %v\n", treeHash, err)
+				}
 			} else if strings.HasPrefix(line, "parent ") {
 				parentHash := strings.TrimPrefix(line, "parent ")
-				fetchObjectRecursive(client, repoID, repo, parentHash, seen)
+				if err := fetchObjectRecursive(client, repoID, repo, parentHash, seen); err != nil {
+					fmt.Fprintf(Stderr(), "warning: failed to fetch parent %s: %v\n", parentHash, err)
+				}
 			}
 		}
 	} else if objType == plumbing.TreeObject {
@@ -124,7 +131,9 @@ func fetchObjectRecursive(client *Client, repoID string, repo *git.Repository, h
 				break
 			}
 			entryHash := fmt.Sprintf("%x", content[nullIdx+1:nullIdx+21])
-			fetchObjectRecursive(client, repoID, repo, entryHash, seen)
+			if err := fetchObjectRecursive(client, repoID, repo, entryHash, seen); err != nil {
+				fmt.Fprintf(Stderr(), "warning: failed to fetch tree entry %s: %v\n", entryHash, err)
+			}
 			i = nullIdx + 21
 		}
 	}
@@ -147,14 +156,16 @@ func Pull(repoPath, daemonURL, repoID string) error {
 			Hash string `json:"hash"`
 		} `json:"refs"`
 	}
-	if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/clone", repoID), &repoInfo); err != nil {
+	if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/clone", url.PathEscape(repoID)), &repoInfo); err != nil {
 		return fmt.Errorf("fetching remote refs: %w", err)
 	}
 
 	// Fetch objects for new refs
 	seen := make(map[string]bool)
 	for _, ref := range repoInfo.Refs {
-		fetchObjectRecursive(client, repoID, repo, ref.Hash, seen)
+		if err := fetchObjectRecursive(client, repoID, repo, ref.Hash, seen); err != nil {
+			fmt.Fprintf(Stderr(), "warning: failed to fetch %s: %v\n", ref.Hash, err)
+		}
 	}
 
 	updated := 0

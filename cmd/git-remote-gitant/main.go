@@ -9,6 +9,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -21,7 +22,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	remoteName := os.Args[1]
 	repoID := os.Args[2]
 
 	// Parse gitant://<repo-id> URL
@@ -59,7 +59,7 @@ func main() {
 					Hash string `json:"hash"`
 				} `json:"refs"`
 			}
-			if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/refs", repoID), &result); err != nil {
+			if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/refs", url.PathEscape(repoID)), &result); err != nil {
 				fmt.Fprintf(os.Stderr, "error listing refs: %v\n", err)
 				fmt.Fprintln(writer)
 				writer.Flush()
@@ -79,7 +79,6 @@ func main() {
 			}
 			sha1 := parts[1]
 			ref := parts[2]
-			_ = remoteName
 
 			// Fetch the object from daemon
 			var obj struct {
@@ -87,7 +86,7 @@ func main() {
 				Type    string `json:"type"`
 				Content []byte `json:"content"`
 			}
-			if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/objects/%s", repoID, sha1), &obj); err != nil {
+			if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/objects/%s", url.PathEscape(repoID), url.PathEscape(sha1)), &obj); err != nil {
 				fmt.Fprintf(os.Stderr, "error fetching object %s: %v\n", sha1, err)
 			} else {
 				// Write the object data to stdout so git can consume it
@@ -100,9 +99,9 @@ func main() {
 		case strings.HasPrefix(line, "push "):
 			// push <refspec>
 			refspec := strings.TrimPrefix(line, "push ")
-			_ = remoteName
 
 			// Parse refspec: +refs/heads/main:refs/heads/main
+			forcePush := strings.HasPrefix(refspec, "+")
 			refspec = strings.TrimPrefix(refspec, "+")
 			parts := strings.SplitN(refspec, ":", 2)
 			if len(parts) != 2 {
@@ -115,9 +114,13 @@ func main() {
 			localRef := parts[0]
 			remoteRef := parts[1]
 
-			// Use CLI push
-			fmt.Fprintf(os.Stderr, "push %s -> %s (using CLI push)\n", localRef, remoteRef)
-			if err := cli.Push(".", daemonURL, repoID); err != nil {
+			// Use CLI push with the specific ref
+			if forcePush {
+				fmt.Fprintf(os.Stderr, "push +%s -> %s (force)\n", localRef, remoteRef)
+			} else {
+				fmt.Fprintf(os.Stderr, "push %s -> %s\n", localRef, remoteRef)
+			}
+			if err := cli.Push(".", daemonURL, repoID, localRef); err != nil {
 				fmt.Fprintf(os.Stderr, "push error: %v\n", err)
 			}
 			fmt.Fprintln(writer)

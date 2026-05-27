@@ -48,7 +48,7 @@ var extensionInstallCmd = &cobra.Command{
 		client := cli.NewClient(daemonURL)
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/extensions/%s/install", args[0]), nil, &result); err != nil {
+		if err := client.Post(apiPath("/api/v1/extensions", args[0], "install"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -64,7 +64,7 @@ var extensionUninstallCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 		client := cli.NewClient(daemonURL)
 
-		if err := client.Delete(fmt.Sprintf("/api/v1/extensions/%s", args[0])); err != nil {
+		if err := client.Delete(apiPath("/api/v1/extensions", args[0])); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -92,7 +92,7 @@ var kanbanListCmd = &cobra.Command{
 				Name string `json:"name"`
 			} `json:"boards"`
 		}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/kanban", repo), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "kanban"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -119,7 +119,7 @@ var kanbanCreateCmd = &cobra.Command{
 		req := map[string]string{"name": name}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/kanban", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "kanban"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -141,9 +141,9 @@ var epicListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 		client := cli.NewClient(daemonURL)
 
-		path := fmt.Sprintf("/api/v1/repos/%s/epics", repo)
+		path := repoPathSegments(repo, "epics")
 		if status != "" {
-			path += "?status=" + status
+			path += "?status=" + queryEscape(status)
 		}
 
 		var result struct {
@@ -185,7 +185,7 @@ var epicCreateCmd = &cobra.Command{
 		}
 
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/epics", repo), req, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "epics"), req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -261,7 +261,7 @@ var stackListCmd = &cobra.Command{
 				Status string `json:"status"`
 			} `json:"diffs"`
 		}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/stacked-diffs", repo), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "stacked-diffs"), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

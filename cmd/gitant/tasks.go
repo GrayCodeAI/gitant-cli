@@ -22,9 +22,9 @@ var taskListCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		path := fmt.Sprintf("/api/v1/repos/%s/tasks", repo)
+		path := repoPathSegments(repo, "tasks")
 		if status != "" {
-			path += "?status=" + status
+			path += "?status=" + queryEscape(status)
 		}
 
 		var result struct {
@@ -70,7 +70,7 @@ var taskCreateCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/tasks", repo), map[string]string{"title": title, "description": description}, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "tasks"), map[string]string{"title": title, "description": description}, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -88,7 +88,7 @@ var taskClaimCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/tasks/%s/claim", repo, args[0]), nil, &result); err != nil {
+		if err := client.Post(repoPathSegments(repo, "tasks", args[0], "claim"), nil, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -107,7 +107,7 @@ var taskCompleteCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var res map[string]interface{}
-		if err := client.Post(fmt.Sprintf("/api/v1/repos/%s/tasks/%s/complete", repo, args[0]), map[string]string{"result": result}, &res); err != nil {
+		if err := client.Post(repoPathSegments(repo, "tasks", args[0], "complete"), map[string]string{"result": result}, &res); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}

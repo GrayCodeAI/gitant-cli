@@ -24,7 +24,7 @@ var protectionShowCmd = &cobra.Command{
 
 		client := cli.NewClient(daemonURL)
 		var result map[string]interface{}
-		if err := client.Get(fmt.Sprintf("/api/v1/repos/%s/protections/%s", repo, branch), &result); err != nil {
+		if err := client.Get(repoPathSegments(repo, "protections", branch), &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -60,7 +60,7 @@ var protectionSetCmd = &cobra.Command{
 			"no_force_push":    noForcePush,
 		}
 		var result map[string]interface{}
-		if err := client.Put(fmt.Sprintf("/api/v1/repos/%s/protections/%s", repo, branch), body, &result); err != nil {
+		if err := client.Put(repoPathSegments(repo, "protections", branch), body, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -82,7 +82,7 @@ var protectionRemoveCmd = &cobra.Command{
 		daemonURL, _ := cmd.Flags().GetString("daemon-url")
 
 		client := cli.NewClient(daemonURL)
-		if err := client.Delete(fmt.Sprintf("/api/v1/repos/%s/protections/%s", repo, branch)); err != nil {
+		if err := client.Delete(repoPathSegments(repo, "protections", branch)); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
