@@ -1,5 +1,18 @@
+# Build / local binaries
 bin/
-coverage.out
-coverage.html
-dist/
 gitant
+git-remote-gitant
+dist/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage.html
+coverage.out
+coverage/
+
+# Env
+.env*
+!.env.example
